@@ -176,13 +176,14 @@ int fanControl(float temp_C)
   else            //Has been running so map
   {
     fanSpeed = map(temp_C, tempMin, tempMax, 25, 255);  //25 = ~10% of max
-    fanSpeed = constrain(fanSpeed, 25, 255)
+    fanSpeed = constrain(fanSpeed, 25, 255);
     return fanSpeed; 
   }
 }
 //End of "fanControl" routine -----------------------------------------
 
-//Routine "displayTemp_C" on tft screen
+//Routine "displayTemp_C" and fan speed graph on tft screen
+//Adjust colour of temperature string <=35c green 35c - 45c gold 45c+ red
 void displayTemp_C ()
 {
 //Only run if temperature has changed
@@ -193,7 +194,21 @@ void displayTemp_C ()
 		x = 30, y = 85;										//Set display co-ordinates x & y
 		tft.fillRectangle(x, y+1, w+x+2, y-h, COLOR_BLACK);	//Place rectangle over previous data
 		tft.setGFXFont(&FreeSans24pt7b);  					// Set font
-		tft.drawGFXText(x, y, fridgeTempStr, COLOR_GREEN);	// Print string
+
+		if (temp_C <=35) 
+		{
+		tft.drawGFXText(x, y, fridgeTempStr, COLOR_GREEN);	// Print string	in green
+		}
+
+		if ((temp_C >35) && (temp_C<= 45))
+		{
+			tft.drawGFXText(x, y, fridgeTempStr, COLOR_GOLD);	// Print string	in gold
+		}
+		if (temp_C >45)
+		{
+			tft.drawGFXText(x, y, fridgeTempStr, COLOR_RED);	// Print string in red
+		}
+				
 		temp_C_Old = temp_C;
 	}
 
@@ -233,12 +248,12 @@ void displayData ()
   Serial.print(fanPercent, 0);
   Serial.println(" %");
   
-*/  
   //Light level data
   Serial.print("lightSensor = ");
   Serial.print(lightSensor);
   Serial.print(" ledLvl,"); 
   Serial.println(ledLvl); 
+ */
 
 }
 //End of "displayData" routine ---------------------------------------------
