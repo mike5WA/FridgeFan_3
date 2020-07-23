@@ -1,6 +1,10 @@
 /*
 6/7/20 Mike Garner
+
 Fridge Fan Control with 2.2" TFT Display 220*176 pixels
+Measures temperature in fridge cavity and adjusts extractor fan speeds accordingly
+To dim display at night light sensor used to adjust TFT led brightness
+
 Arduino Pins:
  A1  	Light sensor
  P2 	DHT22 temp & humidity sensor.
@@ -37,26 +41,26 @@ Arduino Pins:
 #define TFT_LED 6   // 0 if wired to +5V directly
 #define TFT_BRIGHTNESS 200
 
-char myString[6];       //Array for float to string conversions
+char myString[6];   //Array for float to string conversions
 
 #define DHTTYPE DHT22
-#define DHTPIN 2             // digital pin DHT sensor connected to
+#define DHTPIN 2       // digital pin DHT sensor connected to
 
 DHT dht(DHTPIN, DHTTYPE);
 
 // Use software SPI (slower)
 TFT_22_ILI9225 tft = TFT_22_ILI9225(TFT_RST, TFT_RS, TFT_CS, TFT_SDI, TFT_CLK, TFT_LED, TFT_BRIGHTNESS);
 
-//Hardware pin definitions
+//Hardware pin definitions go here in lieu, but this sensor not working on hardware SPI!
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-const byte LIGHT = A1;            //Analog pin for light sensor data
+const byte LIGHT = A2;            //Analog pin for light sensor data
 const byte PWM_595 = 3;           //PWM pin for led to tft
 
 //Global Variables ****************************************************************
 long lastSecond;        //The millis counter to see when a second rolls by
 
 //Fridge temp & control variables
-int fan = false;        //Set fan to "0" at staqrt
+int fan = false;        //Set fan to "0" at start
 float fanSpeed;         
 float fanPercent;
 float temp_C = 0;
@@ -71,28 +75,28 @@ int lightSensor;        //Variable for light sensor
 
 //TFT Co-ordinate
 int16_t x=0, y=0, w, h; 	//Positions on TFT Signed integers
-int barLeft;				//Left side of temp bar graph
-int barRight;				//Right side of temp bar graph
+int barLeft;				      //Left side of temp bar graph
+int barRight;				      //Right side of temp bar graph
 
 //***********************************************************************
 
 void setup()
 {
-  	Serial.begin(115200);	// start serial port
-  	dht.begin();			//Start the DHT sensor 
-  	delay(3000);			//Give sensor time to respond
+  Serial.begin(115200);	// start serial port
+  dht.begin();			   //Start the DHT sensor 
+  delay(3000);			   //Give sensor time to respond
 
-  	tft.begin();
-  	tft.clear(); 
-  	tft.setOrientation(3);  //Put screen in landscape mode
+  tft.begin();
+  tft.clear(); 
+  tft.setOrientation(3);  //Put screen in landscape mode
+  
 // Draw header string
-	
 	tft.fillRectangle(0, 25,220,0, COLOR_DARKBLUE); //Background for heading
-	tft.setGFXFont(&FreeSerifBold9pt7b);  			// Set font
- 	String heading = "FRIDGE MONITOR";
- 	tft.getGFXTextExtent(heading, x, y, &w, &h); 	// Get string extents
-  	tft.drawGFXText(16, 21, heading, COLOR_WHITE); // Print string
-
+	tft.setGFXFont(&FreeSerifBold9pt7b);  			    // Set font
+  String heading = "FRIDGE MONITOR";
+ 	tft.getGFXTextExtent(heading, x, y, &w, &h); 	  // Get string extents
+  tft.drawGFXText(16, 21, heading, COLOR_WHITE);  // Print string heading to TFT
+  
 // Draw line under heading
 	tft.fillRectangle(x, 26,220,27, COLOR_GOLD);
 
@@ -101,15 +105,15 @@ void setup()
 
 // Place "c" char on screen 
 	String myChar = "c";
-	tft.setGFXFont(&FreeSans24pt7b);  					// Set font
-	tft.drawGFXText(155, 85, myChar, COLOR_WHITE); 		// Print string
+	tft.setGFXFont(&FreeSans24pt7b);  					      // Set font
+	tft.drawGFXText(155, 85, myChar, COLOR_WHITE); 		// Print string c to TFT
 
 // Place % ticks above graph
 	String myPercent = " 0%    25%    50%    75%    100%";
 	String myFanSpeed = "FAN SPEED";
 	tft.setGFXFont(&Org_01);
-	tft.drawGFXText(0, 132, myPercent, COLOR_WHITE); // Print string
-	tft.drawGFXText(70, 168, myFanSpeed, COLOR_WHITE); // Print string
+	tft.drawGFXText(0, 132, myPercent, COLOR_WHITE);   // Print % labels to TFT
+	tft.drawGFXText(70, 168, myFanSpeed, COLOR_WHITE); // Print Fan Speed label to TFT
 
 //Check we are getting a reading from DHT22 sensor
 	temp_C = dht.readTemperature();
@@ -117,13 +121,13 @@ void setup()
     { 
 //Pass reading to routine which will loop while (t_dht) is not a number (isnan)
       Serial.println("DHT sensor offline!");
-      //dht_OffLine(temp_C);
     }
+
     Serial.println("DHT sensor online!");
 
 //Set start of program to enable readings at specific intervals
-  //int seconds = 0;
   lastSecond = millis();    //Returns the number of miliseconds program has been running
+  
 }
 
 //End of Void Setup ********************************************
@@ -218,14 +222,14 @@ void displayTemp_C ()
 		x = 10, y = 155, w = 210, h = 140;				//Set co-ords for 200 pixels wide 
 		tft.fillRectangle(x, y, w, h, COLOR_GREEN); 
 		}
-		else if(fanSpeed < 255)							//Less than maximum
+		else if(fanSpeed < 255)							          //Less than maximum
 		{
-		barLeft = fanPercent*2;							//1% = 2 pixels
+		barLeft = fanPercent*2;							          //1% = 2 pixels
 		x = 10, y = 155, (w = barLeft+10), h = 140;		//Set display co-ordinates left  
-		tft.fillRectangle(x, y, w, h, COLOR_GREEN); 	//Set left bar
-		x = (barLeft + 10);								//Start of right bar (from pixel)
-		w = (tft.maxX()-10);							//Width of right bar (to pixel)
-		tft.fillRectangle(x, y, w, h, COLOR_SNOW);		//Draw right bar
+		tft.fillRectangle(x, y, w, h, COLOR_GREEN);   //Set left bar
+		x = (barLeft + 10);								            //Start of right bar (from pixel)
+		w = (tft.maxX()-10);							            //Width of right bar (to pixel)
+		tft.fillRectangle(x, y, w, h, COLOR_SNOW);	  //Draw right bar
 	}
 }	
 //End of routine to display temperature----------------------------------------------------
@@ -233,10 +237,10 @@ void displayTemp_C ()
 //Routine "displayData" Collation of data for display ---------------
 void displayData ()
 {
-
+/*
   Serial.println();
   Serial.println("Current sensor readings: ");
-/*  
+  
   //Fridge temperature & fan Speed
   Serial.print("Fridge ");
   Serial.print(temp_C, 2); 
@@ -253,7 +257,7 @@ void displayData ()
   Serial.print(lightSensor);
   Serial.print(" ledLvl,"); 
   Serial.println(ledLvl); 
- */
+*/ 
 
 }
 //End of "displayData" routine ---------------------------------------------
@@ -285,25 +289,24 @@ void loop()
       fanSpeed = fanControl(temp_C);  	//Access mapping routine
       fan = true;                     	//Set fan to 1 as now running
     }  
-	fanPercent = (fanSpeed/255)*100;    //Gives percent of full speed
+	fanPercent = (fanSpeed/255)*100;      //Gives percent of full speed
   	analogWrite(fanPin, fanSpeed);      // sends PWM signal to pin_D3 for fan control 
 
-//Read light sensor at A1
+//Read light sensor at A2
 	lightSensor = analogRead(LIGHT);
-//Serial.println (lightSensor);
 //Will give value from 0 (dark) to 1024 (bright). 
 //Sensor located inside so map 0 to 900 rather than max 1024
-  	ledLvl = map(lightSensor, 50, 900, 0, 255); //Full on when bright dim when dark
-  	ledLvl = constrain(ledLvl, 0, 255); 
+  ledLvl = map(lightSensor, 50, 900, 0, 255); //Full on when bright dim when dark
+  ledLvl = constrain(ledLvl, 0, 255); 
 
 //Adjust led bar graph brightness full daytime dim nightime
  	analogWrite(TFT_LED, ledLvl);      // sends PWM signal to pin_6 for led lux control 
 
-  	displayTemp_C ();					//Display temperature on tft
+  displayTemp_C ();					//Display temperature on tft
 
-  	displayData();
+  displayData();            //Subroutine for serial monitor
 
-	smartDelay(5000);                   //Delay  5 secs between readings
+	smartDelay(5000);         //Delay  5 secs between readings
 }
 
 
